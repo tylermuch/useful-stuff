@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import sys
+import os
+from subprocess import check_output
+
+current_branch = check_output(['git', 'symbolic-ref', '--short', 'HEAD']).strip()
+upstream_branch = sys.argv[1]
+
+if len(sys.argv) > 2:
+	branch_to_rebase = sys.argv[2]
+else:
+	branch_to_rebase = current_branch
+
+print "[pre-rebase] Attempting to rebase '%s' onto '%s'" % (branch_to_rebase, upstream_branch)
+
+# TODO Make this a little more forgiving. We should be able to rebase master if we haven't yet pushed it to a remote.
+if branch_to_rebase == 'master':
+	print "[pre-rebase] Rebasing master is not allowed."
+	print "[pre-rebase] Rebasing is only allowed on feature branches."
+	print "[pre-rebase] This is to prevent breaking master."
+	print "[pre-rebase] Aborting rebase."
+	exit(1)
