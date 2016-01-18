@@ -7,4 +7,4 @@ git config --global --add alias.lg '!f() { LEN=$1; if [ -z "$LEN" ]; then LEN=50
 
 
 # Git status without showing untracked files
-git config --global --add alias.s 'status --untracked-files=no'
+git config --global --add alias.s 'status'
