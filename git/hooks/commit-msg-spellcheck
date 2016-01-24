@@ -1,0 +1,123 @@
+#!/bin/bash
+
+#
+#	Search the pending commit message for spelling errors. 
+#	If any are found the user will be asked if they would like to commit anyway
+#	or abort.
+#
+
+YELLOW='\033[0;96m'
+RED='\033[0;91m'
+GREEN='\033[0;92m'
+RESET='\033[0m'
+
+COMMIT_MSG="$1"
+
+commit_msg_editor=$GIT_EDITOR
+
+# Verify that GIT_EDITOR env variable is set
+if [ -z ${commit_msg_editor+x} ]; then
+	echo "Set GIT_EDITOR. (export GIT_EDITOR='vim')."
+	exit 1
+fi
+
+# Verify that the aspell tool exists.
+ASPELL=`which aspell`
+if [ $? -ne 0 ]; then
+	echo "Aspell not installed or not in PATH - unable to check spelling" >&2
+	echo "Aspell can be installed with homebrew"
+	exit
+fi
+
+while true; do
+	echo -e "$YELLOW"
+	echo "############### Commit message ###############"
+	grep -v '^#' $COMMIT_MSG
+	echo "##############################################"
+	echo -e "$RESET"
+
+	# Get all of the text that is on lines that do not start with '#'
+	WORDS=$(grep -v '^#' "$1" | $ASPELL list)
+
+
+	if [ -n "$WORDS" ]; then
+		echo "Possible spelling errors:" >&2
+		echo -e "$RED$WORDS$RESET"
+		echo ""
+
+		# Ask the user if they want to commit regardless of possible spelling issues.
+		# Default is no.
+		exec < /dev/tty
+		while true; do
+			read -p "Commit anyway? (y/N) " yn
+			
+			if [ "$yn" == "" ]; then
+				yn='N'
+			fi
+			
+			commit_anyway=0
+			case $yn in
+				[Yy] ) commit_anyway=1; break;;
+				[Nn] ) commit_anyway=0; break;;
+				* ) echo "Please answer y for yes or n for no.";;
+			esac
+		done
+		exec <&-
+
+		if [ $commit_anyway == 1 ]; then
+			echo -e "${GREEN}Committing...${RESET}"
+			exit 0
+		else
+			# Ask the user whether or not they want to edit the commit message.
+			# Default is yes.
+			exec < /dev/tty
+			while true; do
+				read -p "Edit commit message? (Y/n) " yn
+				
+				if [ "$yn" == "" ]; then
+					yn='Y'
+				fi
+
+				edit_msg=1
+				case $yn in
+					[Yy] ) edit_msg=1; break;;
+					[Nn] ) edit_msg=0; break;;
+					* ) echo "Please answer y for yes or n for no.";;
+				esac
+			done
+			exec <&-
+
+			if [ $edit_msg == 1 ]; then
+				echo "Editing commit message..."
+
+				# Add possible spelling errors to the bottom of the commit message
+				# so that they can be seen in the editor
+				echo "############################" >> $COMMIT_MSG
+				echo "# Possible spelling errors:" >> $COMMIT_MSG
+				for word in $WORDS
+				do
+					echo "# $word" >> $COMMIT_MSG
+				done
+
+				# Open commit message with text editor
+				$commit_msg_editor $COMMIT_MSG < /dev/tty > /dev/tty
+
+				# Delete all lines after ######... in the commit message
+				sed -i '' -e '/############################/,$d' $COMMIT_MSG
+
+				echo -e "\033[0;90m"
+				jot -b '#' -s '' `tput cols`
+				echo -e "${RESET}"
+
+				continue;
+			else
+				echo -e "${RED}Aborting commit.${RESET}"
+				exit 1
+			fi
+		fi
+	else
+		echo "No spelling errors found."
+		echo -e "${GREEN}Committing...${RESET}"
+		exit 0
+	fi
+done
