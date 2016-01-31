@@ -37,7 +37,7 @@ while true; do
 	echo -e "$RESET"
 
 	# Get all of the text that is on lines that do not start with '#'
-	WORDS=$(grep -v '^#' "$1" | $ASPELL list)
+	WORDS=$(grep -v '^#' "$1" | $ASPELL list --ignore-case --extra-dicts=commit-msg-dict)
 
 
 	if [ -n "$WORDS" ]; then
@@ -65,6 +65,9 @@ while true; do
 		exec <&-
 
 		if [ $commit_anyway == 1 ]; then
+			echo "$WORDS" >> ~/aspell_words.txt
+			$ASPELL --lang=en create master commit-msg-dict < ~/aspell_words.txt 2>&1 > /dev/null
+			echo -e "${GREEN}Added the above words to dictionary.${RESET}"
 			echo -e "${GREEN}Committing...${RESET}"
 			exit 0
 		else
@@ -93,6 +96,7 @@ while true; do
 				# Add possible spelling errors to the bottom of the commit message
 				# so that they can be seen in the editor
 				echo "############################" >> $COMMIT_MSG
+
 				echo "# Possible spelling errors:" >> $COMMIT_MSG
 				for word in $WORDS
 				do
