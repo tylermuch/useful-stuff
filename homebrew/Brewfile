@@ -9,3 +9,9 @@ brew "ssh-copy-id"
 brew "tig"
 brew "trash"
 brew "wget"
+brew "watch"
+
+cask 'caffeine'
+cask 'flux'
+cask 'alfred'
+cask 'iterm2'
